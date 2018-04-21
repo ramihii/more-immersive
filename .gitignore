@@ -1,0 +1,24 @@
+# Intermediate build files; object files
+*.o
+*.class
+
+# Java
+*.jar
+
+# Native libraries
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+
+# vim
+*.swp
+*.swo
+*~
+
+# ctags
+tags
+
+# compiled README.md
+/README.html
