@@ -1,0 +1,27 @@
+HUOM! täs on aika paljon kovakoodattuja juttuja joita pitää ehkä muuttaa koodissa.
+
+0. asenna opencv-python
+
+1. tulosta camera-calibration-checker-board_9x7.pdf
+
+2. ota vähintään 10 kuvaa tulostetusta ruudokosta eri asennoissa ja
+   eri kohdissa kameraa.
+
+   HUOM! On tärkeää, että ruudokko on kuvatessa mahdollisimman tasainen.
+   
+
+3. laita kuvat calibration-img kansioon
+
+4. mittaa tulostetun shakkiruudun koko, tarvittaessa päivitä squareSize. (pitäs olla oikein jos tulostit a4 paperille)
+   aja calibrate.py (tämä ohjelma lukee kaikki .png tiedostot calibration-img kansiosta, tarvittaessa
+                     muuta tiedostopääte rivillä 26.)
+
+5.1 calibrate.py tallentaa camera matrix:in ja distortion coefficients 
+    a.npz tiedoston, joka on joku numpy:n (numpy.savez) formaatti.
+
+
+6. Markereita voi luoda ajamalla generateMarkers.py, markerit luodaan kasioon ./aruco/
+
+7. aruco.py rivillä 24 muuta markerin koko, tulostetun markkerin kokoiseksi (koko metreissä)
+
+   aruco.py pitäis nyt toimia webcamilla, paitsi z-axis välillä heittelee väärälle puolelle.
