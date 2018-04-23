@@ -7,6 +7,8 @@ from render_model import *
 import sys
 import transformations as tf
 
+import cv2
+
 # Usage
 # python 3d_viewer.py model_filename
 
@@ -58,9 +60,20 @@ def main(model, width, height):
     # would be way more logical if rootnode.parent == None
     logger.info('parent = {}'.format(app.scene == app.scene.rootnode.parent))
 
-    while app.loop():
+    cam = cv2.VideoCapture(0)
 
+    while app.loop():
+        # Video camera frame
+        ret,frame = cam.read();
+
+        #logger.info("frame shape = {}".format(frame.shape))
+        # draw background
+        app.draw_background(frame)
+
+        # calculate camera matrix
         app.update_view_camera()
+
+        #app.render_grid()
 
         ## Main rendering
         app.render()

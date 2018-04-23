@@ -279,6 +279,8 @@ class PyAssimp3DViewer:
 
         self.prepare_shaders()
 
+        self.backgroundTex = None
+
         self.scene = None
         # stores the OpenGL vertex/faces/normals buffers pointers
         self.meshes = {}
@@ -394,9 +396,8 @@ class PyAssimp3DViewer:
         glDepthFunc(GL_LEQUAL)
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE if wireframe else GL_FILL)
-        glDisable(GL_CULL_FACE) if twosided else glEnable(GL_CULL_FACE)
-
-        render_grid()
+        # Enabling CULL_FACE removes our background
+        #glDisable(GL_CULL_FACE) if twosided else glEnable(GL_CULL_FACE)
 
         self.recursive_helpers_render(self.scene.rootnode)
 
@@ -520,6 +521,66 @@ class PyAssimp3DViewer:
             return False
 
         return True
+
+    def draw_background(self, frame):
+        # TODO do we need to push/pop Projection matrix
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, 1, 0, 1, -1, 1)
+
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_LIGHTING)
+        glDepthMask(GL_FALSE)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        glEnable(GL_TEXTURE_2D)
+        if not self.backgroundTex:
+            self.backgroundTex = glGenTextures(1)
+
+        glBindTexture(GL_TEXTURE_2D, self.backgroundTex)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        # TODO is the frame data type unsigned byte?
+        # TODO we call this every frame? is this right way of doing it?
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, frame.shape[1], frame.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, frame)
+
+        glBegin(GL_TRIANGLES)
+
+        # TODO use vbuffer not these old commands
+        glTexCoord2f(0.0, 0.0)
+        # TODO we don't want to blend color here (we need to otherwise it's red)
+        # tbh it should be fixed if we use a shader instead
+        glColor3f(1.0, 1.0, 1.0)
+        glVertex3f(0.0, 1.0, 0.0)
+
+        glTexCoord2f(1.0, 0.0)
+        glVertex3f(1.0, 1.0, 0.0)
+
+        glTexCoord2f(0.0, 1.0)
+        glVertex3f(0.0, 0.0, 0.0)
+
+        # second
+        glTexCoord2f(0.0, 1.0)
+        glVertex3f(0.0, 0.0, 0.0)
+
+        glTexCoord2f(1.0, 0.0)
+        glVertex3f(1.0, 1.0, 0.0)
+
+        glTexCoord2f(1.0, 1.0)
+        glVertex3f(1.0, 0.0, 0.0)
+
+        glEnd();
+
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LIGHTING);
+
 
     def update_view_camera(self):
 
