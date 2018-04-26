@@ -64,7 +64,10 @@ def main(model, width, height):
 
     while app.loop():
         # Video camera frame
-        ret,frame = cam.read();
+        ret,frame = cam.read()
+
+        # change frame to RGB
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         #logger.info("frame shape = {}".format(frame.shape))
         # draw background
