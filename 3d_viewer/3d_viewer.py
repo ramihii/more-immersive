@@ -112,6 +112,7 @@ def main(model, width, height):
         rvecs, tvecs = readAndDrawMarkers(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+        # Translation
         # TODO scale is all messed up
         # need to test properly with light conditions where the marker doesn't get lost
         # figure out if scale is constant or depends on the camera distance or smth?
@@ -120,12 +121,28 @@ def main(model, width, height):
             v = tvecs[0][0]
             # negatives because our tracking camera is in front of us (webcam)
             t = tf.translation_matrix((-scale*v[0], -scale*v[1], scale*v[2]))
+        # Rotation
+        # TODO something wrong with the rotation, investigate
+        if len(rvecs) > 0:
+            r = rvecs[0][0]
+            # transform rotation vector (r) to 4x4 OpenGL matrix
+            # Rotation matrix is correct but the axes and directions may be wrong
+            m, _ = cv2.Rodrigues(r)
+            for i in range(0, 3):
+                for j in range(0, 3):
+                    R[i][j] = m[i][j]
+            #print("R={}".format(R))
 
 
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
-        # TODO combine matrices
-        app.scene.rootnode.transformation = t #np.dot(R,t)
+        # TODO fix the individual parts and combine the transformations
+        # only translation
+        #app.scene.rootnode.transformation = t
+        # only rotation
+        app.scene.rootnode.transformation = R
+        # both
+        #app.scene.rootnode.transformation = np.dot(R,t)
 
         #logger.info("frame shape = {}".format(frame.shape))
         # draw background
