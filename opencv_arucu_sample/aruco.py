@@ -7,7 +7,7 @@ d = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
 
 
 # Load previously saved camera calibration data
-with np.load('a.npz') as X:
+with np.load('calibration.npz') as X:
     mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
 
@@ -19,11 +19,11 @@ def readAndDrawMarkers(frame):
 
     # highlight detected markers and draw ids
     image = cv2.aruco.drawDetectedMarkers(frame, corners, ids, (255, 0, 255) )
-    
+
     # rotation and translation vectors
     # 0.07 is marker size in meters
     rvecs, tvecs, _objPoints = cv2.aruco.estimatePoseSingleMarkers( corners, 0.07, mtx, dist )
-    
+
     # draw axis for the markers
     for i in range( len(ids)):
         image = cv2.aruco.drawAxis(image, mtx, dist, rvecs[i], tvecs[i], 0.05)

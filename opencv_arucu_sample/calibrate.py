@@ -52,4 +52,4 @@ print(mtx)
 
 print('\ndistortion coefficients:')
 print(dist)
-np.savez('a.npz', mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+np.savez('calibration.npz', mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)

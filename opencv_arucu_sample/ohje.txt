@@ -8,7 +8,7 @@ HUOM! täs on aika paljon kovakoodattuja juttuja joita pitää ehkä muuttaa koo
    eri kohdissa kameraa.
 
    HUOM! On tärkeää, että ruudokko on kuvatessa mahdollisimman tasainen.
-   
+
 
 3. laita kuvat calibration-img kansioon
 
@@ -16,7 +16,7 @@ HUOM! täs on aika paljon kovakoodattuja juttuja joita pitää ehkä muuttaa koo
    aja calibrate.py (tämä ohjelma lukee kaikki .png tiedostot calibration-img kansiosta, tarvittaessa
                      muuta tiedostopääte rivillä 26.)
 
-5.1 calibrate.py tallentaa camera matrix:in ja distortion coefficients 
+5.1 calibrate.py tallentaa camera matrix:in ja distortion coefficients
     a.npz tiedoston, joka on joku numpy:n (numpy.savez) formaatti.
 
 
@@ -25,3 +25,5 @@ HUOM! täs on aika paljon kovakoodattuja juttuja joita pitää ehkä muuttaa koo
 7. aruco.py rivillä 24 muuta markerin koko, tulostetun markkerin kokoiseksi (koko metreissä)
 
    aruco.py pitäis nyt toimia webcamilla, paitsi z-axis välillä heittelee väärälle puolelle.
+
+Kopio calibration.npz -> 3d_viewer/calibration.npz

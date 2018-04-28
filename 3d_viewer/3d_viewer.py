@@ -8,6 +8,7 @@ import sys
 import transformations as tf
 
 import cv2
+import numpy as np
 
 # Usage
 # python 3d_viewer.py model_filename
@@ -35,6 +36,48 @@ import cv2
 # TODO keyboard events (and mouse for that matter) are in render_model.py
 # move them here!
 
+# marker dictionary
+d = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
+
+
+# Load previously saved camera calibration data
+# TODO we need to check properly if there is a calibration file and inform the user
+# TODO In ideal world we would just open a calibration program
+# TODO running the program without ARuco (and calibration), useful for testing
+#   just contain the ARuco things (calibration, globals etc.) behind a function call
+with np.load('calibration.npz') as X:
+    mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
+
+
+# Return the orientation and translation vectors from ARuco
+# TODO marker -> transformation map
+#   since now we just take the first marker meaning we can't use two trackers
+#   and rotating the cube will cause the object to jump around
+# for starters this could be solved by having a global for the marker id
+#   take first marker id when the program is run and track only that marker
+# later we need to map six markers into one model and so on
+def readAndDrawMarkers(frame):
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, d)
+
+    # No markers
+    if ids is None:
+        return [],[];
+
+    # highlight detected markers and draw ids
+    # This modifies the original image
+    image = cv2.aruco.drawDetectedMarkers(frame, corners, ids, (255, 0, 255) )
+
+    # rotation and translation vectors
+    # 0.07 is marker size in meters
+    rvecs, tvecs, _objPoints = cv2.aruco.estimatePoseSingleMarkers( corners, 0.07, mtx, dist )
+
+    # draw axis for the markers
+    # TODO do we want?
+    #for i in range( len(ids)):
+    #    image = cv2.aruco.drawAxis(image, mtx, dist, rvecs[i], tvecs[i], 0.05)
+
+    return rvecs, tvecs
+
 def main(model, width, height):
     app = PyAssimp3DViewer(model, w=width, h=height)
 
@@ -42,19 +85,17 @@ def main(model, width, height):
 
     # Transform the whole model (root object)
     # Example translation matrix
-    t = np.array([[1, 0, 0, 2], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.float32)
+    t = tf.translation_matrix((0, 0, 0))
+    # or t = tf.identity_matrix()
 
     # Example rotation matrix
     # take a look at transformations.py for more
     origin, xaxis, yaxis, zaxis = (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)
-    Rx = tf.rotation_matrix(0*math.pi/180, xaxis)
-    Ry = tf.rotation_matrix(45*math.pi/180, yaxis)
-    Rz = tf.rotation_matrix(30*math.pi/180, zaxis)
-    R = tf.concatenate_matrices(Rx, Ry, Rz)
-
-    # Use np.dot to combine to transformation matrices
-    # scene.rootnode is the whole model you just imported
-    app.scene.rootnode.transformation = np.dot(R,t)
+    #Rx = tf.rotation_matrix(0*math.pi/180, xaxis)
+    #Ry = tf.rotation_matrix(45*math.pi/180, yaxis)
+    #Rz = tf.rotation_matrix(30*math.pi/180, zaxis)
+    #R = tf.concatenate_matrices(Rx, Ry, Rz)
+    R = tf.identity_matrix()
 
     # this is true: scene == scene.rootnode.parent
     # would be way more logical if rootnode.parent == None
@@ -67,7 +108,24 @@ def main(model, width, height):
         ret,frame = cam.read()
 
         # change frame to RGB
+        tvecs = []
+        rvecs, tvecs = readAndDrawMarkers(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # TODO scale is all messed up
+        # need to test properly with light conditions where the marker doesn't get lost
+        # figure out if scale is constant or depends on the camera distance or smth?
+        scale = 30
+        if len(tvecs) > 0:
+            v = tvecs[0][0]
+            # negatives because our tracking camera is in front of us (webcam)
+            t = tf.translation_matrix((-scale*v[0], -scale*v[1], scale*v[2]))
+
+
+        # Use np.dot to combine to transformation matrices
+        # scene.rootnode is the whole model you just imported
+        # TODO combine matrices
+        app.scene.rootnode.transformation = t #np.dot(R,t)
 
         #logger.info("frame shape = {}".format(frame.shape))
         # draw background
