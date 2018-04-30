@@ -48,6 +48,7 @@ d = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
 with np.load('calibration.npz') as X:
     mtx, dist, _, _ = [X[i] for i in ('mtx', 'dist', 'rvecs', 'tvecs')]
 
+CUBE_ID = None
 
 # Return the orientation and translation vectors from ARuco
 # TODO marker -> transformation map
@@ -63,6 +64,12 @@ def readAndDrawMarkers(frame):
     if ids is None:
         return [],[];
 
+    # use only 1 marker while testig
+    global CUBE_ID
+    if CUBE_ID is None:
+        CUBE_ID = ids[0][0]
+        print("CUBE_ID set to " + str(CUBE_ID))
+
     # highlight detected markers and draw ids
     # This modifies the original image
     image = cv2.aruco.drawDetectedMarkers(frame, corners, ids, (255, 0, 255) )
@@ -76,7 +83,15 @@ def readAndDrawMarkers(frame):
     #for i in range( len(ids)):
     #    image = cv2.aruco.drawAxis(image, mtx, dist, rvecs[i], tvecs[i], 0.05)
 
-    return rvecs, tvecs
+    # set CUBE_ID vectors to 0 if found
+    for i in range(len(ids)):
+        x = ids[i]
+        if x[0] == CUBE_ID:
+            rvecs[0] = rvecs[i]
+            tvecs[0] = tvecs[i]
+            return rvecs, tvecs
+
+    return [],[]
 
 def main(model, width, height):
     app = PyAssimp3DViewer(model, w=width, h=height)
@@ -127,13 +142,17 @@ def main(model, width, height):
         # TODO something wrong with the rotation, investigate
         if len(rvecs) > 0:
             r = rvecs[0][0]
+            r[2] = -r[2]
             # transform rotation vector (r) to 4x4 OpenGL matrix
             # Rotation matrix is correct but the axes and directions may be wrong
             m, _ = cv2.Rodrigues(r)
             for i in range(0, 3):
                 for j in range(0, 3):
                     R[i][j] = m[i][j]
+
             #print("R={}".format(R))
+            R = np.transpose(R)
+
 
 
         # Use np.dot to combine to transformation matrices
