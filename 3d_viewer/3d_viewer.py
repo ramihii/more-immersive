@@ -96,6 +96,8 @@ def main(model, width, height):
     #Rz = tf.rotation_matrix(30*math.pi/180, zaxis)
     #R = tf.concatenate_matrices(Rx, Ry, Rz)
     R = tf.identity_matrix()
+    # scale matrix
+    sm = tf.scale_matrix(10, origin)
 
     # this is true: scene == scene.rootnode.parent
     # would be way more logical if rootnode.parent == None
@@ -116,7 +118,7 @@ def main(model, width, height):
         # TODO scale is all messed up
         # need to test properly with light conditions where the marker doesn't get lost
         # figure out if scale is constant or depends on the camera distance or smth?
-        scale = 30
+        scale = 100
         if len(tvecs) > 0:
             v = tvecs[0][0]
             # negatives because our tracking camera is in front of us (webcam)
@@ -136,15 +138,9 @@ def main(model, width, height):
 
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
-        # TODO fix the individual parts and combine the transformations
-        # only translation
-        #app.scene.rootnode.transformation = t
-        # only rotation
-        app.scene.rootnode.transformation = R
-        # both
-        #app.scene.rootnode.transformation = np.dot(R,t)
+        # translation, scale, rotation
+        app.scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
 
-        #logger.info("frame shape = {}".format(frame.shape))
         # draw background
         app.draw_background(frame)
 
