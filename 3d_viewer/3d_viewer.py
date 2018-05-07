@@ -78,8 +78,8 @@ def readAndDrawMarkers(frame):
 
     return rvecs, tvecs
 
-def main(model, width, height):
-    app = PyAssimp3DViewer(model, w=width, h=height)
+def main(models, width, height):
+    app = PyAssimp3DViewer(models, w=width, h=height)
 
     clock = pygame.time.Clock()
 
@@ -98,10 +98,6 @@ def main(model, width, height):
     R = tf.identity_matrix()
     # scale matrix
     sm = tf.scale_matrix(10, origin)
-
-    # this is true: scene == scene.rootnode.parent
-    # would be way more logical if rootnode.parent == None
-    logger.info('parent = {}'.format(app.scene == app.scene.rootnode.parent))
 
     cam = cv2.VideoCapture(0)
 
@@ -127,6 +123,7 @@ def main(model, width, height):
         # TODO something wrong with the rotation, investigate
         if len(rvecs) > 0:
             r = rvecs[0][0]
+            r[2] = -r[2]
             # transform rotation vector (r) to 4x4 OpenGL matrix
             # Rotation matrix is correct but the axes and directions may be wrong
             m, _ = cv2.Rodrigues(r)
@@ -139,7 +136,8 @@ def main(model, width, height):
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
         # translation, scale, rotation
-        app.scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
+        for scene in app.scenes:
+            scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
 
         # draw background
         app.draw_background(frame)
@@ -181,5 +179,6 @@ if __name__ == '__main__':
         print("Usage: " + __file__ + " <model>")
         sys.exit(2)
 
-    main(model=sys.argv[1], width=1024, height=768)
+    _, *args = sys.argv
+    main(models=args, width=1024, height=768)
 
