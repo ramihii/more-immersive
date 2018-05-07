@@ -25,3 +25,5 @@ tags
 # compiled README.md
 /README.html
 
+# calibration files
+calibration.npz
