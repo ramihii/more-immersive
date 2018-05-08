@@ -95,20 +95,23 @@ def readAndDrawMarkers(frame):
 
     return [],[]
 
+
 # key: cubeID, 
 # value: cube object
 cubes = {}
 
-# detects cubes and updates cube.rvec and cube.tvec for each cube in global variable cubes
-# returns cubeIds of the detected cubes
+# detects cubes and saves rotation and translation vectors
+# to the corresponding cube-object
+#
+# return cubeIDs of the detected cubes
 def detectCubes(frame):
     global cubes
     detected = []
-    rvecs = np.empty( (0, 3), dtype=np.float32)
-    tvecs = np.empty( (0, 3), dtype=np.float32)
+    #rvecs = np.empty( (0, 3), dtype=np.float32)
+    #tvecs = np.empty( (0, 3), dtype=np.float32)
     corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, d)
     if ids is None:
-        return rvecs, tvecs
+        return detected
 
     for i in ids:
         multiplier = int( i[0] / 6 )
@@ -120,14 +123,14 @@ def detectCubes(frame):
             cubes[multiplier] = cubePose.Cube(multiplier)
         else:
             rvec, tvec = cubes[multiplier].detectCube(frame, mtx, dist, corners, ids)
-            rvecs = np.append(rvecs, rvec, axis=0)
-            tvecs = np.append(tvecs, tvec, axis=0)
-            print(rvecs)
+            #rvecs = np.append(rvecs, rvec, axis=0)
+            #tvecs = np.append(tvecs, tvec, axis=0)
+            #print(rvecs)
 
-    return rvecs,tvecs
+    return detected.sort()
 
-def main(model, width, height):
-    app = PyAssimp3DViewer(model, w=width, h=height)
+def main(models, width, height):
+    app = PyAssimp3DViewer(models, w=width, h=height)
 
     clock = pygame.time.Clock()
 
@@ -147,10 +150,6 @@ def main(model, width, height):
     # scale matrix
     sm = tf.scale_matrix(10, origin)
 
-    # this is true: scene == scene.rootnode.parent
-    # would be way more logical if rootnode.parent == None
-    logger.info('parent = {}'.format(app.scene == app.scene.rootnode.parent))
-
     cam = cv2.VideoCapture(0)
 
     while app.loop():
@@ -166,13 +165,13 @@ def main(model, width, height):
         #rvecs, tvecs, frame = cubePose.detectCube(frame, mtx, dist)
 
         detectCubes(frame)
+
+        # for now model follows the first cube
         global cubes
         if len( cubes.keys() ) > 0:
             first = list ( cubes.keys() )[0]
             rvecs = cubes[first].getRvec()
             tvecs = cubes[first].getTvec()
-
-        print(rvecs)
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
@@ -189,7 +188,7 @@ def main(model, width, height):
         # Rotation
         # TODO something wrong with the rotation, investigate
         if len(rvecs) > 0:
-            r = rvecs[0]
+            r = np.copy(rvecs[0])
             r[2] = -r[2]
             # transform rotation vector (r) to 4x4 OpenGL matrix
             # Rotation matrix is correct but the axes and directions may be wrong
@@ -205,7 +204,8 @@ def main(model, width, height):
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
         # translation, scale, rotation
-        app.scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
+        for scene in app.scenes:
+            scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
 
         # draw background
         app.draw_background(frame)
@@ -247,5 +247,6 @@ if __name__ == '__main__':
         print("Usage: " + __file__ + " <model>")
         sys.exit(2)
 
-    main(model=sys.argv[1], width=1024, height=768)
+    _, *args = sys.argv
+    main(models=args, width=1024, height=768)
 

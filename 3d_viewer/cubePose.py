@@ -2,8 +2,6 @@ import numpy as np
 import cv2
 
 
-dic = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
-
 m = 0.047       # marker size in meters
 b = 0.01       # border size in meters
 n = 0.
@@ -13,34 +11,17 @@ o = c / 2
 h = m / 2
 v = h + b
 # 0 point in a corner
-'''
-boardCorners = [np.array([[b, b, n], [v, b, n], [v, v, n], [b, v, n]], dtype=np.float32),
-                np.array([[b, c, b], [v, c, b], [v, c, v], [b, c, v]], dtype=np.float32),
-                np.array([[b, n, v], [v, n, v], [v, n, b], [b, n, b]], dtype=np.float32),
-                np.array([[b, v, c], [v, v, c], [v, b, c], [b, b, c]], dtype=np.float32),
-                np.array([[n, b, v], [n, b, b], [n, v, b], [n, v, v]], dtype=np.float32),
-                np.array([[c, b, b], [c, b, v], [c, v, v], [c, v, b]], dtype=np.float32)]
 
-# 0 point in the middle of the cube
-boardCorners = [np.array([[-h,-h, o], [-h, h, o], [ h, h, o], [ h,-h, o]], dtype=np.float32),
-                np.array([[ o,-h, h], [ o, h, h], [ o, h,-h], [ o,-h,-h]], dtype=np.float32),
-                np.array([[-o,-h,-h], [-o, h,-h], [-o, h, h], [-o,-h, h]], dtype=np.float32),
-                np.array([[ h,-h,-o], [ h, h,-o], [-h, h,-o], [-h,-h,-o]], dtype=np.float32),
-                np.array([[-h, o, h], [-h, o,-h], [ h, o,-h], [ h, o, h]], dtype=np.float32),
-                np.array([[-h,-o,-h], [-h,-o, h], [ h,-o, h], [ h,-o,-h]], dtype=np.float32)]
-
-boardIds = np.array([[0],[1],[2],[3],[4],[5]], dtype=np.int32)
-board = cv2.aruco.Board_create(boardCorners, dic, boardIds)
-'''
 
 class Cube():
+    # marker corners
     boardCorners = [np.array([[-h, h, o], [ h, h, o], [ h,-h, o], [-h,-h, o]], dtype=np.float32),
                     np.array([[-o, h,-h], [-o, h, h], [-o,-h, h], [-o,-h,-h]], dtype=np.float32),
                     np.array([[ o, h, h], [ o, h,-h], [ o,-h,-h], [ o,-h, h]], dtype=np.float32),
                     np.array([[ h, h,-o], [-h, h,-o], [-h,-h,-o], [ h,-h,-o]], dtype=np.float32),
                     np.array([[-h,-o, h], [ h,-o, h], [ h,-o,-h], [-h,-o,-h]], dtype=np.float32),
                     np.array([[-h, o,-h], [ h, o,-h], [ h, o, h], [-h, o, h]], dtype=np.float32)]
-
+    # marker order
     boardIds = np.array([[0],[1],[2],[3],[4],[5]], dtype=np.int32)
     d = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
     
@@ -51,7 +32,8 @@ class Cube():
         self.rvec = []
         self.tvec = []
 
-
+    # detect pose of the cube
+    # return rotation and translation vectors
     def detectCube(self, frame, mtx, dist, corners, ids):
         if ids is None:
             return [],[]

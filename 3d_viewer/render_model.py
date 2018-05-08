@@ -103,6 +103,7 @@ DEFAULT_CLIP_PLANE_FAR = 1000.0
 
 
 def get_world_transform(scene, node):
+    # scene.rootnode.parent == scene (was expecting it to be None)
     if node == scene.rootnode:
         return scene.rootnode.transformation
 
@@ -263,7 +264,7 @@ class DefaultCamera:
 class PyAssimp3DViewer:
     base_name = "PyASSIMP 3D viewer"
 
-    def __init__(self, model, w=1024, h=768):
+    def __init__(self, models, w=1024, h=768):
 
         self.w = w
         self.h = h
@@ -281,14 +282,15 @@ class PyAssimp3DViewer:
 
         self.backgroundTex = None
 
-        self.scene = None
+        self.scenes = []
         # stores the OpenGL vertex/faces/normals buffers pointers
         self.meshes = {}
 
         self.current_cam = DefaultCamera(self.w, self.h, fov=70)
         self.set_camera_projection()
 
-        self.load_model(model)
+        for model in models:
+            self.load_model(model)
 
     def prepare_shaders(self):
 
@@ -328,17 +330,17 @@ class PyAssimp3DViewer:
         logger.info("Loading model:" + path + "...")
 
         if postprocess:
-            self.scene = pyassimp.load(path, postprocess)
+            self.scenes.append(pyassimp.load(path, postprocess))
         else:
-            self.scene = pyassimp.load(path)
+            self.scenes.append(pyassimp.load(path))
         logger.info("Done.")
 
-        scene = self.scene
+        scene = self.scenes[-1]
         # log some statistics
         logger.info("  meshes: %d" % len(scene.meshes))
         logger.info("  total faces: %d" % sum([len(mesh.faces) for mesh in scene.meshes]))
         logger.info("  materials: %d" % len(scene.materials))
-        self.bb_min, self.bb_max = get_bounding_box(self.scene)
+        self.bb_min, self.bb_max = get_bounding_box(scene)
         logger.info("  bounding box:" + str(self.bb_min) + " - " + str(self.bb_max))
 
         self.scene_center = [(a + b) / 2. for a, b in zip(self.bb_min, self.bb_max)]
@@ -399,7 +401,9 @@ class PyAssimp3DViewer:
         # Enabling CULL_FACE removes our background
         #glDisable(GL_CULL_FACE) if twosided else glEnable(GL_CULL_FACE)
 
-        self.recursive_helpers_render(self.scene.rootnode)
+        # FIXME (do we even want these)
+        #for scene in self.scenes:
+        #    self.recursive_helpers_render(scene.rootnode)
 
         ### Then, inner shading
         # glDepthMask(GL_TRUE)
@@ -412,11 +416,13 @@ class PyAssimp3DViewer:
         glUniformMatrix4fv(shader.u_viewProjectionMatrix, 1, GL_TRUE,
                            np.dot(self.projection_matrix, self.view_matrix))
 
-        self.recursive_render(self.scene.rootnode, shader)
+        for scene in self.scenes:
+            self.recursive_render(scene, scene.rootnode, shader)
 
         glUseProgram(0)
 
 
+    """
     def recursive_helpers_render(self, node):
         m = get_world_transform(self.scene, node)
 
@@ -424,6 +430,7 @@ class PyAssimp3DViewer:
 
         for child in node.children:
                 self.recursive_helpers_render(child)
+    """
 
 
     def render_mesh(self, mesh, wt, shader):
@@ -468,11 +475,11 @@ class PyAssimp3DViewer:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
 
-    def recursive_render(self, node, shader):
+    def recursive_render(self, scene, node, shader):
         """ Main recursive rendering method.
         """
 
-        m = get_world_transform(self.scene, node)
+        m = get_world_transform(scene, node)
 
         # Mesh rendering modes
         ###
@@ -482,7 +489,7 @@ class PyAssimp3DViewer:
 
 
         for child in node.children:
-            self.recursive_render(child, shader)
+            self.recursive_render(scene, child, shader)
 
 
     """
