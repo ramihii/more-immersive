@@ -10,6 +10,8 @@ import transformations as tf
 import cv2
 import numpy as np
 
+import cubePose
+
 # Usage
 # python 3d_viewer.py model_filename
 
@@ -93,6 +95,37 @@ def readAndDrawMarkers(frame):
 
     return [],[]
 
+# key: cubeID, 
+# value: cube object
+cubes = {}
+
+# detects cubes and updates cube.rvec and cube.tvec for each cube in global variable cubes
+# returns cubeIds of the detected cubes
+def detectCubes(frame):
+    global cubes
+    detected = []
+    rvecs = np.empty( (0, 3), dtype=np.float32)
+    tvecs = np.empty( (0, 3), dtype=np.float32)
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, d)
+    if ids is None:
+        return rvecs, tvecs
+
+    for i in ids:
+        multiplier = int( i[0] / 6 )
+        if multiplier in detected:
+            continue
+        detected.append(multiplier)
+
+        if multiplier not in cubes:
+            cubes[multiplier] = cubePose.Cube(multiplier)
+        else:
+            rvec, tvec = cubes[multiplier].detectCube(frame, mtx, dist, corners, ids)
+            rvecs = np.append(rvecs, rvec, axis=0)
+            tvecs = np.append(tvecs, tvec, axis=0)
+            print(rvecs)
+
+    return rvecs,tvecs
+
 def main(model, width, height):
     app = PyAssimp3DViewer(model, w=width, h=height)
 
@@ -126,22 +159,37 @@ def main(model, width, height):
 
         # change frame to RGB
         tvecs = []
-        rvecs, tvecs = readAndDrawMarkers(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rvecs = []
+        #rvecs, tvecs = readAndDrawMarkers(frame)
+        
+        # TODO detectCube only works with 1 cube at the moment.
+        #rvecs, tvecs, frame = cubePose.detectCube(frame, mtx, dist)
 
+        detectCubes(frame)
+        global cubes
+        if len( cubes.keys() ) > 0:
+            first = list ( cubes.keys() )[0]
+            rvecs = cubes[first].getRvec()
+            tvecs = cubes[first].getTvec()
+
+        print(rvecs)
+        
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
         # Translation
         # TODO scale is all messed up
         # need to test properly with light conditions where the marker doesn't get lost
         # figure out if scale is constant or depends on the camera distance or smth?
+        
         scale = 100
         if len(tvecs) > 0:
-            v = tvecs[0][0]
+            v = tvecs[0]
             # negatives because our tracking camera is in front of us (webcam)
             t = tf.translation_matrix((-scale*v[0], -scale*v[1], scale*v[2]))
         # Rotation
         # TODO something wrong with the rotation, investigate
         if len(rvecs) > 0:
-            r = rvecs[0][0]
+            r = rvecs[0]
             r[2] = -r[2]
             # transform rotation vector (r) to 4x4 OpenGL matrix
             # Rotation matrix is correct but the axes and directions may be wrong
@@ -152,8 +200,7 @@ def main(model, width, height):
 
             #print("R={}".format(R))
             R = np.transpose(R)
-
-
+        
 
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
