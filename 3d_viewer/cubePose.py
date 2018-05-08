@@ -10,7 +10,6 @@ c = m + b + b  # cube size
 o = c / 2
 h = m / 2
 v = h + b
-# 0 point in a corner
 
 
 class Cube():
