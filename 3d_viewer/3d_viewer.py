@@ -93,7 +93,7 @@ def readAndDrawMarkers(frame):
 
     return [],[]
 
-def main(model, width, height):
+def main(model, width, height, camera):
     app = PyAssimp3DViewer(model, w=width, h=height)
 
     clock = pygame.time.Clock()
@@ -118,7 +118,7 @@ def main(model, width, height):
     # would be way more logical if rootnode.parent == None
     logger.info('parent = {}'.format(app.scene == app.scene.rootnode.parent))
 
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(camera)
 
     while app.loop():
         # Video camera frame
@@ -200,5 +200,6 @@ if __name__ == '__main__':
         print("Usage: " + __file__ + " <model>")
         sys.exit(2)
 
-    main(model=sys.argv[1], width=1024, height=768)
+    camera = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    main(model=sys.argv[1], width=1024, height=768, camera=camera)
 

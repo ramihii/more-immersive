@@ -1,6 +1,11 @@
 import cv2
+import sys
 
-cam = cv2.VideoCapture(0)
+camera = 0
+if len(sys.argv) > 1:
+	camera = int(sys.argv[1])
+
+cam = cv2.VideoCapture(camera)
 
 cv2.namedWindow("test")
 
