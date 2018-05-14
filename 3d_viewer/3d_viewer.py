@@ -10,6 +10,8 @@ import transformations as tf
 import cv2
 import numpy as np
 
+import cubePose
+
 # Usage
 # python 3d_viewer.py model_filename
 
@@ -93,8 +95,41 @@ def readAndDrawMarkers(frame):
 
     return [],[]
 
-def main(model, width, height, camera):
-    app = PyAssimp3DViewer(model, w=width, h=height)
+# key: cubeID, 
+# value: cube object
+cubes = {}
+
+# detects cubes and saves rotation and translation vectors
+# to the corresponding cube-object
+#
+# return cubeIDs of the detected cubes
+def detectCubes(frame):
+    global cubes
+    detected = []
+    #rvecs = np.empty( (0, 3), dtype=np.float32)
+    #tvecs = np.empty( (0, 3), dtype=np.float32)
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, d)
+    if ids is None:
+        return detected
+
+    for i in ids:
+        multiplier = int( i[0] / 6 )
+        if multiplier in detected:
+            continue
+        detected.append(multiplier)
+
+        if multiplier not in cubes:
+            cubes[multiplier] = cubePose.Cube(multiplier)
+        else:
+            rvec, tvec = cubes[multiplier].detectCube(frame, mtx, dist, corners, ids)
+            #rvecs = np.append(rvecs, rvec, axis=0)
+            #tvecs = np.append(tvecs, tvec, axis=0)
+            #print(rvecs)
+
+    return detected.sort()
+
+def main(models, width, height, camera):
+    app = PyAssimp3DViewer(models, w=width, h=height)
 
     clock = pygame.time.Clock()
 
@@ -114,10 +149,6 @@ def main(model, width, height, camera):
     # scale matrix
     sm = tf.scale_matrix(10, origin)
 
-    # this is true: scene == scene.rootnode.parent
-    # would be way more logical if rootnode.parent == None
-    logger.info('parent = {}'.format(app.scene == app.scene.rootnode.parent))
-
     cam = cv2.VideoCapture(camera)
 
     while app.loop():
@@ -126,22 +157,37 @@ def main(model, width, height, camera):
 
         # change frame to RGB
         tvecs = []
-        rvecs, tvecs = readAndDrawMarkers(frame)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rvecs = []
+        #rvecs, tvecs = readAndDrawMarkers(frame)
+        
+        # TODO detectCube only works with 1 cube at the moment.
+        #rvecs, tvecs, frame = cubePose.detectCube(frame, mtx, dist)
 
+        detectCubes(frame)
+
+        # for now model follows the first cube
+        global cubes
+        if len( cubes.keys() ) > 0:
+            first = list ( cubes.keys() )[0]
+            rvecs = cubes[first].getRvec()
+            tvecs = cubes[first].getTvec()
+        
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
         # Translation
         # TODO scale is all messed up
         # need to test properly with light conditions where the marker doesn't get lost
         # figure out if scale is constant or depends on the camera distance or smth?
+        
         scale = 100
         if len(tvecs) > 0:
-            v = tvecs[0][0]
+            v = tvecs[0]
             # negatives because our tracking camera is in front of us (webcam)
             t = tf.translation_matrix((-scale*v[0], -scale*v[1], scale*v[2]))
         # Rotation
         # TODO something wrong with the rotation, investigate
         if len(rvecs) > 0:
-            r = rvecs[0][0]
+            r = np.copy(rvecs[0])
             r[2] = -r[2]
             # transform rotation vector (r) to 4x4 OpenGL matrix
             # Rotation matrix is correct but the axes and directions may be wrong
@@ -152,13 +198,13 @@ def main(model, width, height, camera):
 
             #print("R={}".format(R))
             R = np.transpose(R)
-
-
+        
 
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
         # translation, scale, rotation
-        app.scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
+        for scene in app.scenes:
+            scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
 
         # draw background
         app.draw_background(frame)
@@ -197,9 +243,19 @@ def main(model, width, height, camera):
 
 if __name__ == '__main__':
     if not len(sys.argv) > 1:
-        print("Usage: " + __file__ + " <model>")
+        print("Usage: " + __file__ + " [camera index] <model>")
         sys.exit(2)
 
-    camera = int(sys.argv[2]) if len(sys.argv) > 2 else 0
-    main(model=sys.argv[1], width=1024, height=768, camera=camera)
+    try:
+        camera = int(sys.argv[1])
 
+        if len(sys.argv) < 3:
+            print("Usage: " + __file__ + " [camera index] <model>")
+            sys.exit(2)
+
+        args = sys.argv[2:]
+    except ValueError:
+        camera = 0
+        args = sys.argv[1:]
+
+    main(models=args, width=1024, height=768, camera=camera)
