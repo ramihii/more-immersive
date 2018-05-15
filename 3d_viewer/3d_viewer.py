@@ -95,7 +95,6 @@ def readAndDrawMarkers(frame):
 
     return [],[]
 
-
 # key: cubeID, 
 # value: cube object
 cubes = {}
@@ -129,7 +128,7 @@ def detectCubes(frame):
 
     return detected.sort()
 
-def main(models, width, height):
+def main(models, width, height, camera):
     app = PyAssimp3DViewer(models, w=width, h=height)
 
     clock = pygame.time.Clock()
@@ -150,7 +149,7 @@ def main(models, width, height):
     # scale matrix
     sm = tf.scale_matrix(10, origin)
 
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(camera)
 
     while app.loop():
         # Video camera frame
@@ -244,9 +243,19 @@ def main(models, width, height):
 
 if __name__ == '__main__':
     if not len(sys.argv) > 1:
-        print("Usage: " + __file__ + " <model>")
+        print("Usage: " + __file__ + " [camera index] <model>")
         sys.exit(2)
 
-    _, *args = sys.argv
-    main(models=args, width=1024, height=768)
+    try:
+        camera = int(sys.argv[1])
 
+        if len(sys.argv) < 3:
+            print("Usage: " + __file__ + " [camera index] <model>")
+            sys.exit(2)
+
+        args = sys.argv[2:]
+    except ValueError:
+        camera = 0
+        args = sys.argv[1:]
+
+    main(models=args, width=1024, height=768, camera=camera)
