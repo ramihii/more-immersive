@@ -110,7 +110,7 @@ def detectCubes(frame):
     #tvecs = np.empty( (0, 3), dtype=np.float32)
     corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, d)
     if ids is None:
-        return detected
+        return []
 
     for i in ids:
         multiplier = int( i[0] / 6 )
@@ -126,7 +126,7 @@ def detectCubes(frame):
             #tvecs = np.append(tvecs, tvec, axis=0)
             #print(rvecs)
 
-    return detected.sort()
+    return detected
 
 def main(models, width, height, camera):
     app = PyAssimp3DViewer(models, w=width, h=height)
@@ -163,48 +163,55 @@ def main(models, width, height, camera):
         # TODO detectCube only works with 1 cube at the moment.
         #rvecs, tvecs, frame = cubePose.detectCube(frame, mtx, dist)
 
-        detectCubes(frame)
-
-        # for now model follows the first cube
         global cubes
-        if len( cubes.keys() ) > 0:
-            first = list ( cubes.keys() )[0]
-            rvecs = cubes[first].getRvec()
-            tvecs = cubes[first].getTvec()
-        
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # Translation
-        # TODO scale is all messed up
-        # need to test properly with light conditions where the marker doesn't get lost
-        # figure out if scale is constant or depends on the camera distance or smth?
-        
-        scale = 100
-        if len(tvecs) > 0:
-            v = tvecs[0]
-            # negatives because our tracking camera is in front of us (webcam)
-            t = tf.translation_matrix((-scale*v[0], -scale*v[1], scale*v[2]))
-        # Rotation
-        # TODO something wrong with the rotation, investigate
-        if len(rvecs) > 0:
-            r = np.copy(rvecs[0])
-            r[2] = -r[2]
-            # transform rotation vector (r) to 4x4 OpenGL matrix
-            # Rotation matrix is correct but the axes and directions may be wrong
-            m, _ = cv2.Rodrigues(r)
-            for i in range(0, 3):
-                for j in range(0, 3):
-                    R[i][j] = m[i][j]
+        detectCubes(frame)
+        cubeIDs = cubes.keys()
 
-            #print("R={}".format(R))
-            R = np.transpose(R)
+        # calculate trasformation matrix for each cube
+        transformations = []
+        for key in list( cubeIDs ):
+            cube = cubes[key]
+            rvecs = cube.getRvec()
+            tvecs = cube.getTvec()
+            
+            
+            # Translation
+            # TODO scale is all messed up
+            # need to test properly with light conditions where the marker doesn't get lost
+            # figure out if scale is constant or depends on the camera distance or smth?
+
+            scale = 100
+            if len(tvecs) > 0:
+                v = tvecs[0]
+                # negatives because our tracking camera is in front of us (webcam)
+                t = tf.translation_matrix((-scale*v[0], -scale*v[1], scale*v[2]))
+            # Rotation
+            # TODO something wrong with the rotation, investigate
+            if len(rvecs) > 0:
+                r = np.copy(rvecs[0])
+                r[2] = -r[2]
+                # transform rotation vector (r) to 4x4 OpenGL matrix
+                # Rotation matrix is correct but the axes and directions may be wrong
+                m, _ = cv2.Rodrigues(r)
+                for i in range(0, 3):
+                    for j in range(0, 3):
+                        R[i][j] = m[i][j]
+
+                #print("R={}".format(R))
+                R = np.transpose(R)
+            transformations.append( np.dot(np.dot(t, sm), R) )
         
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # Use np.dot to combine to transformation matrices
         # scene.rootnode is the whole model you just imported
         # translation, scale, rotation
-        for scene in app.scenes:
-            scene.rootnode.transformation = np.dot(np.dot(t, sm), R)
+        for i  in range( len(app.scenes) ):
+            if len(transformations) > i:
+                scene = app.scenes[i]
+                scene.rootnode.transformation = transformations[i]
+
 
         # draw background
         app.draw_background(frame)
