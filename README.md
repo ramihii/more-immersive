@@ -1,6 +1,19 @@
 # Immersive AR - project
 
-## Linux instructions
+A desktop software that tracks ARuco cubes and replaces them with 3D models. Supports multiple cubes, different models.
+
+Cubes use ARuco markers, 6 per cube (in order) so if you generate markers use the 1-6 for first cube, 7-12 for second etc.
+
+Cubes are replaced by 3D models that are provided as command-line parameters.
+
+## Dependencies:
+* Python 3: https://www.python.org/
+* Open Asset Import Library (assimp): https://github.com/assimp/assimp
+* OpenCV for python: https://pypi.org/project/opencv-python/
+* OpenCV contrib for python: https://pypi.org/project/opencv-contrib-python/
+
+## Install
+### Linux instructions
 
 1. Make sure Python 3 is installed.
 
@@ -22,25 +35,30 @@ On Arch Linux:
 $ python 3d_viewer.py tree.obj
 ```
 
-## Windows instructions
+### Windows instructions
 1. Install Python 3
 
 2. Install dependencies
-pip install pygame pyopengl opencv-python opencv-contrib-python
+```
+# pip install pygame pyopengl opencv-python opencv-contrib-python
+```
 
 3. Install pyassimp
+For x64 Windows the prebuilt dll don't work so you can download it from:
 Download: https://drive.google.com/open?id=19286UTVZo4BLxf6Shm-q64kni7nFnnVI
 run python setup.py install
 copy assimp dll from win32/{ARCH} to {Python_Install_dir}/site-packages/pyassimp
 ARCH is your Python 3 architecture (defaults to x86 when you download Python)
 run python in commandline to find out
 
-4. Test it
-commandline:
+4. Run it
+```
 cd 3d_viewer
-python 3d_viewer.py tree.obj
+python 3d_viewer.py bottle.obj
+```
 
-## Calibration
+## Use
+### Calibration
 
 1. Follow steps 1-3 of your system's setup instructions.
 
@@ -62,7 +80,7 @@ in the `calibrate.py` script.
 
 5. Copy the generated `calibration.npz` file to `3d_viewer/calibration.npz`.
 
-## Marker generation
+### Marker generation
 
 1. Follow steps 1-3 of your system's setup instructions.
 
@@ -72,3 +90,17 @@ is created automatically if it doesn't exist.
 
 3. Change the line 25 in the script `opencv_arucu_sample/aruco.py` to match
 the size (in meters) of the generated marker(s).
+
+### Running
+start the program:
+```
+# python 3d_viewer.py <model1.obj, ...>
+```
+for example
+```
+# python 3d_viewer.py bottle.obj cup.obj
+```
+Use AR cubes to move the models.
+```
+ESC - to exit the program
+```

@@ -95,7 +95,7 @@ def readAndDrawMarkers(frame):
 
     return [],[]
 
-# key: cubeID, 
+# key: cubeID,
 # value: cube object
 cubes = {}
 
@@ -159,7 +159,7 @@ def main(models, width, height, camera):
         tvecs = []
         rvecs = []
         #rvecs, tvecs = readAndDrawMarkers(frame)
-        
+
         # TODO detectCube only works with 1 cube at the moment.
         #rvecs, tvecs, frame = cubePose.detectCube(frame, mtx, dist)
 
@@ -173,8 +173,8 @@ def main(models, width, height, camera):
             cube = cubes[key]
             rvecs = cube.getRvec()
             tvecs = cube.getTvec()
-            
-            
+
+
             # Translation
             # TODO scale is all messed up
             # need to test properly with light conditions where the marker doesn't get lost
@@ -200,7 +200,7 @@ def main(models, width, height, camera):
                 #print("R={}".format(R))
                 R = np.transpose(R)
             transformations.append( np.dot(np.dot(t, sm), R) )
-        
+
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
